@@ -1,4 +1,4 @@
-# FluentExample
+# MultiJoinTest
 
 ## Run MySQL server on Docker
 
@@ -10,3 +10,4 @@ $ docker container run --rm -d \
       --name mysql \
       mysql:5.7
 ```
+Project tests queries with multiple joins to the same table in MySQL and SQLite.
