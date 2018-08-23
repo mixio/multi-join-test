@@ -3,6 +3,8 @@ import FluentMySQL
 
 public struct MessageSQLite: SQLiteModel, Migration, Hashable, Equatable {
     public static let entity = "messages"
+    public static var sqlTableIdentifierString = entity
+
     public var hashValue: Int { return self.id! }
 
     public var id: Int?

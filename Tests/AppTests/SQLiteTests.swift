@@ -5,11 +5,10 @@ import FluentMySQL
 import XCTest
 import JJTools
 
-final class AppTests: XCTestCase {
+final class SQLiteTests: XCTestCase {
 
     var app: Application!
     var sqliteConn: SQLiteConnection!
-    var mysqlConn: MySQLConnection!
     var req: Request!
 
     override func setUp() {
@@ -17,12 +16,10 @@ final class AppTests: XCTestCase {
         app = try! Application.testable()
         req = Request(using: app)
         sqliteConn = try! app.newConnection(to: .sqlite).wait()
-        mysqlConn = try! app.newConnection(to: .mysql).wait()
     }
 
     override func tearDown() {
         sqliteConn.close()
-        mysqlConn.close()
     }
 
     func testSQLiteWithTableNames() throws {
@@ -41,25 +38,29 @@ final class AppTests: XCTestCase {
         ).save(on: conn).wait()
 
         // Fetch
-        let result = try conn.raw(
-            """
-            SELECT * FROM messages
-            JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
-            JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-            WHERE messages.id=\(message.requireID())
-            """
-        ).all().map { [conn] rows in
-            try rows.map { [conn] row -> (Message, Person, Person) in
-                // Using table names.
-                let msg = try conn.decode(Message.self, from: row, table: "messages")
-                let from = try conn.decode(Person.self, from: row, table: "persons")
-                let to = try conn.decode(Person.self, from: row, table: "persons")
-                return (msg, from, to)
-            }
-        }.wait()
-        XCTAssertEqual(result[0].0, message)
-        XCTAssertEqual(result[0].1, person1)
-        XCTAssertEqual(result[0].2, person2)
+        do {
+            let result = try conn.raw(
+                """
+                SELECT * FROM messages
+                JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
+                JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
+                WHERE messages.id=\(message.requireID())
+                """
+            ).all().map { [conn] rows in
+                try rows.map { [conn] row -> (Message, Person, Person) in
+                    // Using table names.
+                    let msg = try conn.decode(Message.self, from: row, table: "messages")
+                    let from = try conn.decode(Person.self, from: row, table: "persons")
+                    let to = try conn.decode(Person.self, from: row, table: "persons")
+                    return (msg, from, to)
+                }
+            }.wait()
+            XCTAssertEqual(result[0].0, message)
+            XCTAssertEqual(result[0].1, person1)
+            XCTAssertEqual(result[0].2, person2)
+        } catch let error {
+            XCTFail(error.localizedDescription)
+        }
     }
 
     func testSQLiteWithTableAliases() throws {
@@ -78,26 +79,62 @@ final class AppTests: XCTestCase {
         ).save(on: conn).wait()
 
         // Fetch
-        let result = try conn.raw(
-            """
-            SELECT * FROM messages
-            JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
-            JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-            WHERE messages.id=\(message.requireID())
-            """
-            ).all().map { [conn] rows in
-                try rows.map { [conn] row -> (Message, Person, Person) in
-                    // Using table aliases.
-                    let msg = try conn.decode(Message.self, from: row, table: "messages")
-                    let from = try conn.decode(Person.self, from: row, table: "from_persons")
-                    let to = try conn.decode(Person.self, from: row, table: "to_persons")
-                    return (msg, from, to)
-                }
-            }.wait()
-        XCTAssertEqual(result[0].0, message)
-        XCTAssertEqual(result[0].1, person1)
-        XCTAssertEqual(result[0].2, person2)
+        do {
+            let result = try conn.raw(
+                """
+                SELECT * FROM messages
+                JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
+                JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
+                WHERE messages.id=\(message.requireID())
+                """
+                ).all().map { [conn] rows in
+                    try rows.map { [conn] row -> (Message, Person, Person) in
+                        // Using table aliases.
+                        let msg = try conn.decode(Message.self, from: row, table: "messages")
+                        let from = try conn.decode(Person.self, from: row, table: "from_persons")
+                        let to = try conn.decode(Person.self, from: row, table: "to_persons")
+                        return (msg, from, to)
+                    }
+                }.wait()
+            XCTAssertEqual(result[0].0, message)
+            XCTAssertEqual(result[0].1, person1)
+            XCTAssertEqual(result[0].2, person2)
+        } catch let error {
+            XCTFail(error.localizedDescription)
+        }
+    }
 
+    func testSQLiteWithVaporSQL() throws {
+        typealias Message = MessageSQLite
+        typealias Person = PersonSQLite
+
+        let conn = sqliteConn!
+
+        // Insert data.
+        let person1 = try Person(name: "Person 1").save(on: conn).wait()
+        let person2 = try Person(name: "Person 2").save(on: conn).wait()
+        let message = try Message(
+            from_person_id: person1.requireID(),
+            to_person_id: person2.requireID(),
+            body: "Bla bla bla"
+            ).save(on: conn).wait()
+
+        // Fetch
+        do {
+            let result = try conn.select().all()
+                .from(Message.self)
+                .join( \Message.from_person_id, to:\Person.id)
+                .join( \Message.to_person_id, to:\Person.id)
+                .where(\Message.id == message.requireID())
+                .all(decoding: Message.self, Person.self, Person.self)
+                .wait()
+            jjprint(result)
+            XCTAssertEqual(result[0].0, message)
+            XCTAssertEqual(result[0].1, person1)
+            XCTAssertEqual(result[0].2, person2)
+        } catch let error {
+            XCTFail(error.localizedDescription)
+        }
     }
 
     func testSQLiteWithColunmAliases() throws {
@@ -158,7 +195,7 @@ final class AppTests: XCTestCase {
             from_person_id: person1.requireID(),
             to_person_id: person2.requireID(),
             body: "Bla bla bla"
-        ).save(on: conn).wait()
+            ).save(on: conn).wait()
 
         // Fetch
         let result = try map(
@@ -175,46 +212,10 @@ final class AppTests: XCTestCase {
                 tuplesArray.append((message, from, to))
             }
             return tuplesArray
-        }.wait()
-        XCTAssertEqual(result[0].0, message)
-        XCTAssertEqual(result[0].1, person1)
-        XCTAssertEqual(result[0].2, person2)
-    }
-
-    func testMySQL() throws {
-        typealias Message = MessageMySQL
-        typealias Person = PersonMySQL
-        let conn = mysqlConn!
-
-        // Insert data
-        let person1 = try Person(name: "Person 1").save(on: conn).wait()
-        let person2 = try Person(name: "Person 2").save(on: conn).wait()
-        let message = try Message(
-            from_person_id: person1.requireID(),
-            to_person_id: person2.requireID(),
-            body: "Bla bla bla"
-            ).save(on: conn).wait()
-
-        // Fetch
-        let result = try conn.raw(
-            """
-            SELECT * FROM messages
-            JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
-            JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-            WHERE messages.id=\(message.requireID())
-            """
-            ).all().map { rows in
-                try rows.map { row -> (Message, Person, Person) in
-                    // Using table aliases.
-                    let msg = try conn.decode(Message.self, from: row, table: "messages")
-                    let from = try conn.decode(Person.self, from: row, table: "from_persons")
-                    let to = try conn.decode(Person.self, from: row, table: "to_persons")
-                    return (msg, from, to)
-                }
             }.wait()
         XCTAssertEqual(result[0].0, message)
         XCTAssertEqual(result[0].1, person1)
         XCTAssertEqual(result[0].2, person2)
-
     }
+
 }

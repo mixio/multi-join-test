@@ -3,7 +3,8 @@ import FluentMySQL
 
 public struct PersonSQLite: SQLiteModel, Migration, Equatable {
     public static let entity = "persons"
-    
+    public static var sqlTableIdentifierString = entity
+
     public var id: Int?
     public var name: String
     
