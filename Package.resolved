@@ -74,6 +74,15 @@
         }
       },
       {
+        "package": "JJTools",
+        "repositoryURL": "https://github.com/mixio/jjtools.git",
+        "state": {
+          "branch": null,
+          "revision": "e3dddf5ddc303264d830c791ce22cfb66643a02e",
+          "version": "0.1.0"
+        }
+      },
+      {
         "package": "Multipart",
         "repositoryURL": "https://github.com/vapor/multipart.git",
         "state": {

@@ -1,9 +1,8 @@
 import FluentSQLite
 import FluentMySQL
 
-public struct Person: SQLiteModel, Migration {
+public struct PersonSQLite: SQLiteModel, Migration, Equatable {
     public static let entity = "persons"
-    
     
     public var id: Int?
     public var name: String
@@ -14,7 +13,7 @@ public struct Person: SQLiteModel, Migration {
     }
 }
 
-public struct PersonMySQL: MySQLModel, Migration {
+public struct PersonMySQL: MySQLModel, Migration, Equatable {
     public static let entity = "persons"
     
     public var id: Int?

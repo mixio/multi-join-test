@@ -1,9 +1,10 @@
 import FluentSQLite
 import FluentMySQL
 
-public struct Message: SQLiteModel, Migration {
+public struct MessageSQLite: SQLiteModel, Migration, Hashable, Equatable {
     public static let entity = "messages"
-    
+    public var hashValue: Int { return self.id! }
+
     public var id: Int?
     
     public var from_person_id: Int
@@ -22,7 +23,7 @@ public struct Message: SQLiteModel, Migration {
     }
 }
 
-public struct MessageMySQL: MySQLModel, Migration {
+public struct MessageMySQL: MySQLModel, Migration, Equatable {
     public static let entity = "messages"
     
     public var id: Int?
