@@ -23,7 +23,7 @@ final class MySQLTests: XCTestCase {
     }
 
 
-    func testMySQL() throws {
+    func testMySQLWithTableAliases() throws {
         typealias Message = MessageMySQL
         typealias Person = PersonMySQL
         let conn = mysqlConn!
@@ -43,9 +43,12 @@ final class MySQLTests: XCTestCase {
             SELECT * FROM messages
             JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
             JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-            WHERE messages.id=\(message.requireID())
+            WHERE messages.id=?
             """
-        ).all().map { rows in
+        )
+        .bind(message.requireID())
+        .all()
+        .map { rows in
             try rows.map { row -> (Message, Person, Person) in
                 // Using table aliases.
                 let msg = try conn.decode(Message.self, from: row, table: "messages")

@@ -39,19 +39,27 @@ final class SQLiteTests: XCTestCase {
 
         // Fetch
         do {
+            let _ = try conn.query("PRAGMA short_column_names = OFF;").wait()
             let result = try conn.raw(
                 """
                 SELECT * FROM messages
                 JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
                 JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-                WHERE messages.id=\(message.requireID())
+                WHERE messages.id=?
                 """
-            ).all().map { [conn] rows in
+            )
+            .bind(message.requireID())
+.           all()
+            .map { [conn] rows in
                 try rows.map { [conn] row -> (Message, Person, Person) in
                     // Using table names.
+//                    let message = row.filter { $0.key.table == "messages" && $0.key.occurrence == 1 }
+//                    let person_from = row.filter { $0.key.table == "persons" && $0.key.occurrence == 1 }
+//                    let person_to = row.filter { $0.key.table == "persons" && $0.key.occurrence == 2 }
                     let msg = try conn.decode(Message.self, from: row, table: "messages")
-                    let from = try conn.decode(Person.self, from: row, table: "persons")
-                    let to = try conn.decode(Person.self, from: row, table: "persons")
+                    let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1)
+                    let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2)
+                    jjprint(msg, from, to)
                     return (msg, from, to)
                 }
             }.wait()
@@ -80,22 +88,28 @@ final class SQLiteTests: XCTestCase {
 
         // Fetch
         do {
+            let _ = try conn.query("PRAGMA short_column_names = OFF;").wait()
             let result = try conn.raw(
                 """
-                SELECT * FROM messages
+                SELECT messages.*, from_persons.id, from_persons.name, to_persons.id, to_persons.name
+                FROM messages
                 JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
                 JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-                WHERE messages.id=\(message.requireID())
+                WHERE messages.id=?
                 """
-                ).all().map { [conn] rows in
-                    try rows.map { [conn] row -> (Message, Person, Person) in
-                        // Using table aliases.
-                        let msg = try conn.decode(Message.self, from: row, table: "messages")
-                        let from = try conn.decode(Person.self, from: row, table: "from_persons")
-                        let to = try conn.decode(Person.self, from: row, table: "to_persons")
-                        return (msg, from, to)
-                    }
-                }.wait()
+            )
+            .bind(message.requireID())
+            .all()
+            .map { [conn] rows in
+                try rows.map { [conn] row -> (Message, Person, Person) in
+                    // Using table aliases.
+                    let msg = try conn.decode(Message.self, from: row, table: "messages")
+                    let from = try conn.decode(Person.self, from: row, table: "from_persons")
+                    let to = try conn.decode(Person.self, from: row, table: "to_persons")
+                    return (msg, from, to)
+                }
+            }
+            .wait()
             XCTAssertEqual(result[0].0, message)
             XCTAssertEqual(result[0].1, person1)
             XCTAssertEqual(result[0].2, person2)
@@ -121,13 +135,32 @@ final class SQLiteTests: XCTestCase {
 
         // Fetch
         do {
-            let result = try conn.select().all()
+            typealias FromPerson = Person
+            typealias ToPerson = Person
+            let result = try conn.select()
+                .all()
+//                .column(SQLiteSelectExpression.keyPath(\Message.id, as: .identifier("Message.id")))
+//                .column(SQLiteSelectExpression.keyPath(\Message.from_person_id, as: .identifier("Message.from_person_id")))
+//                .column(SQLiteSelectExpression.keyPath(\Message.to_person_id, as: .identifier("Message.to_person_id")))
+//                .column(SQLiteSelectExpression.keyPath(\Message.body, as: .identifier("Message.body")))
+//                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("from_person.id")))
+//                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("to_person.id")))
                 .from(Message.self)
-                .join( \Message.from_person_id, to:\Person.id)
-                .join( \Message.to_person_id, to:\Person.id)
+                .join(\Message.from_person_id, to:\FromPerson.id, alias: "F")
+                .join(\Message.to_person_id, to:\ToPerson.id, alias: "T")
                 .where(\Message.id == message.requireID())
-                .all(decoding: Message.self, Person.self, Person.self)
+                .all()
+                .map { [conn] rows in
+                    try rows.map { [conn] row -> (Message, Person, Person) in
+                        // Using table aliases.
+                        let msg = try conn.decode(Message.self, from: row, table: "messages")
+                        let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1)
+                        let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2)
+                        return (msg, from, to)
+                    }
+                }
                 .wait()
+
             jjprint(result)
             XCTAssertEqual(result[0].0, message)
             XCTAssertEqual(result[0].1, person1)
