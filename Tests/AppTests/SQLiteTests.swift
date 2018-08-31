@@ -1,7 +1,6 @@
 @testable import App
 import Vapor
 import FluentSQLite
-import FluentMySQL
 import XCTest
 import JJTools
 
@@ -52,10 +51,7 @@ final class SQLiteTests: XCTestCase {
 .           all()
             .map { [conn] rows in
                 try rows.map { [conn] row -> (Message, Person, Person) in
-                    // Using table names.
-//                    let message = row.filter { $0.key.table == "messages" && $0.key.occurrence == 1 }
-//                    let person_from = row.filter { $0.key.table == "persons" && $0.key.occurrence == 1 }
-//                    let person_to = row.filter { $0.key.table == "persons" && $0.key.occurrence == 2 }
+                    // Using table names and model occurrence.
                     let msg = try conn.decode(Message.self, from: row, table: "messages")
                     let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1)
                     let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2)
@@ -135,8 +131,6 @@ final class SQLiteTests: XCTestCase {
 
         // Fetch
         do {
-            typealias FromPerson = Person
-            typealias ToPerson = Person
             let result = try conn.select()
                 .all()
 //                .column(SQLiteSelectExpression.keyPath(\Message.id, as: .identifier("Message.id")))
@@ -146,8 +140,8 @@ final class SQLiteTests: XCTestCase {
 //                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("from_person.id")))
 //                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("to_person.id")))
                 .from(Message.self)
-                .join(\Message.from_person_id, to:\FromPerson.id, alias: "F")
-                .join(\Message.to_person_id, to:\ToPerson.id, alias: "T")
+                .join(\Message.from_person_id, to:\Person.id, alias: .identifier("F"))
+                .join(\Message.to_person_id, to:\Person.id, alias: .identifier("T"))
                 .where(\Message.id == message.requireID())
                 .all()
                 .map { [conn] rows in

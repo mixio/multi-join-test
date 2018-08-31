@@ -1,31 +1,38 @@
+//
+//  PostgreSQLTests.swift
+//  App
+//
+//  Created by jj on 28/08/2018.
+//
+
 @testable import App
 import Vapor
-import FluentMySQL
+import FluentPostgreSQL
 import XCTest
 import JJTools
 
-final class MySQLTests: XCTestCase {
+final class PostgreSQLTests: XCTestCase {
 
     var app: Application!
-    var mysqlConn: MySQLConnection!
+    var psqlConn: PostgreSQLConnection!
     var req: Request!
 
     override func setUp() {
         try! Application.reset()
         app = try! Application.testable()
         req = Request(using: app)
-        mysqlConn = try! app.newConnection(to: .mysql).wait()
+        psqlConn = try! app.newConnection(to: .psql).wait()
     }
 
     override func tearDown() {
-        mysqlConn.close()
+        psqlConn.close()
     }
 
 
-    func testMySQLWithTableAliases() throws {
-        typealias Message = MessageMySQL
-        typealias Person = PersonMySQL
-        let conn = mysqlConn!
+    func testPostgreSQLWithTableAliases() throws {
+        typealias Message = MessagePostgreSQL
+        typealias Person = PersonPostgreSQL
+        let conn = psqlConn!
 
         // Insert data
         let person1 = try Person(name: "Person 1").save(on: conn).wait()
@@ -43,20 +50,20 @@ final class MySQLTests: XCTestCase {
                 SELECT * FROM messages
                 JOIN persons AS from_persons ON messages.from_person_id = from_persons.id
                 JOIN persons AS to_persons ON messages.to_person_id = to_persons.id
-                WHERE messages.id=?
+                WHERE messages.id=$1
                 """
-            )
-            .bind(message.requireID())
-            .all()
-            .map { rows in
-                try rows.map { row -> (Message, Person, Person) in
-                    // Using table aliases.
-                    let msg = try conn.decode(Message.self, from: row, table: "messages")
-                    let from = try conn.decode(Person.self, from: row, table: "from_persons")
-                    let to = try conn.decode(Person.self, from: row, table: "to_persons")
-                    return (msg, from, to)
-                }
-            }.wait()
+                )
+                .bind(message.requireID())
+                .all()
+                .map { rows in
+                    try rows.map { row -> (Message, Person, Person) in
+                        // Using table aliases.
+                        let msg = try conn.decode(Message.self, from: row, table: "messages")
+                        let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1)
+                        let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2)
+                        return (msg, from, to)
+                    }
+                }.wait()
             XCTAssertEqual(result[0].0, message)
             XCTAssertEqual(result[0].1, person1)
             XCTAssertEqual(result[0].2, person2)
