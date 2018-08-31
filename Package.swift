@@ -8,9 +8,9 @@ let package = Package(
         .package(url: "https://github.com/vapor/vapor.git", from: "3.0.0"),
 
         // 🔵 Swift ORM (queries, models, relations, etc) built.
-        .package(url: "https://github.com/mixio/fluent-sqlite.git", branch: "table-aliases-and-resultset-occurrences"),
-        .package(url: "https://github.com/mixio/fluent-mysql.git", branch: "table-aliases-and-resultset-occurrences"),
-        .package(url: "https://github.com/mixio/fluent-postgresql.git", branch: "table-aliases-and-resultset-occurrences"),
+        .package(url: "https://github.com/mixio/fluent-sqlite.git", .branch("table-aliases-and-resultset-occurrences")),
+        .package(url: "https://github.com/mixio/fluent-mysql.git", .branch("table-aliases-and-resultset-occurrences")),
+        .package(url: "https://github.com/mixio/fluent-postgresql.git", .branch("table-aliases-and-resultset-occurrences")),
 
         .package(url: "https://github.com/mixio/jjtools.git", from: "0.1.0"),
 
