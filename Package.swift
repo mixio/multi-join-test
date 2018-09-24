@@ -16,7 +16,7 @@ let package = Package(
         .package(url: "https://github.com/mixio/fluent-postgresql.git", .branch("mixio-dev")),
 
         // 🛠 JJ Tools.
-        .package(url: "https://github.com/vapor/jjtools.git", from: "0.1.0"),
+        .package(url: "https://github.com/mixio/jjtools.git", from: "0.1.0"),
 
     ],
     targets: [
