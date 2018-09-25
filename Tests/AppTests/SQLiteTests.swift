@@ -134,16 +134,16 @@ final class SQLiteTests: XCTestCase {
             let result = try conn.select()
                 .all()
                 .from(Message.self)
-                .join(\Message.from_person_id, to:\Person.id, alias: .identifier("F"))
-                .join(\Message.to_person_id, to:\Person.id, alias: .identifier("T"))
+                .join(\Message.from_person_id, to:\Person.id, alias: .identifier("F")) // ADDED `alias` parameter to join() method.
+                .join(\Message.to_person_id, to:\Person.id, alias: .identifier("T")) // ADDED `alias` parameter to join() method.
                 .where(\Message.id == message.requireID())
                 .all()
                 .map { [conn] rows in
                     try rows.map { [conn] row -> (Message, Person, Person) in
                         // Using table aliases.
                         let msg = try conn.decode(Message.self, from: row, table: "messages")
-                        let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1)
-                        let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2)
+                        let from = try conn.decode(Person.self, from: row, table: "persons", occurrence: 1) // ADDED `occurrence` parameter to decode() method.
+                        let to = try conn.decode(Person.self, from: row, table: "persons", occurrence: 2) // ADDED `occurrence` parameter to decode() method.
                         return (msg, from, to)
                     }
                 }
