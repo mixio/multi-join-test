@@ -133,12 +133,6 @@ final class SQLiteTests: XCTestCase {
         do {
             let result = try conn.select()
                 .all()
-//                .column(SQLiteSelectExpression.keyPath(\Message.id, as: .identifier("Message.id")))
-//                .column(SQLiteSelectExpression.keyPath(\Message.from_person_id, as: .identifier("Message.from_person_id")))
-//                .column(SQLiteSelectExpression.keyPath(\Message.to_person_id, as: .identifier("Message.to_person_id")))
-//                .column(SQLiteSelectExpression.keyPath(\Message.body, as: .identifier("Message.body")))
-//                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("from_person.id")))
-//                .column(SQLiteSelectExpression.keyPath(\Person.id, as: .identifier("to_person.id")))
                 .from(Message.self)
                 .join(\Message.from_person_id, to:\Person.id, alias: .identifier("F"))
                 .join(\Message.to_person_id, to:\Person.id, alias: .identifier("T"))
